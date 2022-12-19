@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const ErrorHandler = require("../utils/errorHandler");
+const generateAndStoreTokenInCookie = require("../utils/generateAndStoreTokenInCookie");
 
 const create = async (req, res, next) => {
 
@@ -25,30 +27,33 @@ const login = async (req, res, next) => {
     const {email, password} = req.body;
 
     if (!email & !password) {
-        return next(new Error("Email and Password cannot be empty", 400))
+        return next(new ErrorHandler("Email and Password cannot be empty", 400))
     } else if (!email) {
-        return next(new Error("Email cannot be empty", 400))
+        return next(new ErrorHandler("Email cannot be empty", 400))
     } else if (!password) {
-        return next(new Error("Password cannot be empty", 400))
+        return next(new ErrorHandler("Password cannot be empty", 400))
     }
     
     try {
         const user = await User.findOne({ email }).select("+password");
 
         if (!user) {
-            return next(new Error("Invalid Email or Password", 401))
+            return next(new ErrorHandler("Invalid Email or Password", 401))
         }
         const isPasswordMatched = await user.comparePassword(password);
         if(!isPasswordMatched){
-            return next(new Error("Invalid Password", 401));
+            return next(new ErrorHandler("Invalid Password", 401));
         }else{
-            const token = await user.jwtTokenGenerate();
-            // send response
-            res.status(200).json({
-                success:true,
-                token:token,
-                msg: 'login successful!'
-            });
+            // generate token and store in cookie
+            generateAndStoreTokenInCookie(user,200,res);
+
+            // const token = await user.jwtTokenGenerate();
+            // // send response
+            // res.status(200).json({
+            //     success:true,
+            //     token:token,
+            //     msg: 'login successful!'
+            // });
         }
         
     } catch (err) {
